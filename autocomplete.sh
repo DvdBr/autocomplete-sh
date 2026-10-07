@@ -394,7 +394,7 @@ openai_completion() {
 
     if [[ "${ACSH_PROVIDER^^}" == "ANTHROPIC" ]]; then
         content=$(echo "$response_body" | jq -r '.content[0].input.commands')
-    elif [[ "${ACSH_PROVIDER^^}" == "GROQ" ]]; then
+    elif [[ "${ACSH_PROVIDER^^}" == "GROQ" || "${ACSH_PROVIDER^^}" == "MISTRAL" ]]; then
         content=$(echo "$response_body" | jq -r '.choices[0].message.content')
         content=$(echo "$content" | jq -r '.completions')
     elif [[ "${ACSH_PROVIDER^^}" == "OLLAMA" ]]; then
@@ -565,8 +565,7 @@ show_config() {
         echo -e "  STATUS: \033[31;5mDisabled\033[0m - Run 'source autocomplete config' to verify."
     fi
     if [ ! -f "$config_file" ]; then
-        echo_error "Configuration file not found: $config_file. Run autocomplete install."
-        return
+        build_config
     fi
     acsh_load_config
     term_width=$(tput cols)
@@ -619,18 +618,17 @@ show_config() {
 }
 
 set_config() {
-    local key="$1" value="$2" config_file="$HOME/.autocomplete/config"
-    key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    key=$(echo "$key" | tr '[:lower:]' '[:upper:]' | sed 's/[^A-Z0-9]/_/g')
+    local original_key="$1" value="$2" config_file="$HOME/.autocomplete/config"
+    original_key=$(echo "$original_key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    local key=$(echo "$original_key" | tr '[:lower:]' '[:upper:]' | sed 's/[^A-Z0-9]/_/g')
     if [ -z "$key" ]; then
         echo_error "SyntaxError: expected 'autocomplete config set <key> <value>'"
         return
     fi
     if [ ! -f "$config_file" ]; then
-        echo_error "Configuration file not found: $config_file. Run autocomplete install."
-        return
+        build_config
     fi
-    sed -i "s|^\($key:\).*|\1 $value|" "$config_file"
+    sed -i "s|^\($original_key:\).*|\1 $value|" "$config_file"
     acsh_load_config
 }
 
