@@ -74,6 +74,11 @@ _autocomplete_modellist['groq:		deepseek-r1-distill-llama-70b-specdec']='{ "comp
 _autocomplete_modellist['groq:		llama-3.3-70b-specdec']='{ "completion_cost":0.0000000, "prompt_cost":0.0000000, "endpoint": "https://api.groq.com/openai/v1/chat/completions", "model": "llama-3.3-70b-specdec", "provider": "groq" }'
 _autocomplete_modellist['groq:		llama-3.2-1b-preview']='{ "completion_cost":0.0000000, "prompt_cost":0.0000000, "endpoint": "https://api.groq.com/openai/v1/chat/completions", "model": "llama-3.2-1b-preview", "provider": "groq" }'
 _autocomplete_modellist['groq:		llama-3.2-3b-preview']='{ "completion_cost":0.0000000, "prompt_cost":0.0000000, "endpoint": "https://api.groq.com/openai/v1/chat/completions", "model": "llama-3.2-3b-preview", "provider": "groq" }'
+# Mistral models
+_autocomplete_modellist['mistral:		mistral-tiny']='{ "completion_cost":0.0000009, "prompt_cost":0.00000025, "endpoint": "https://api.mistral.ai/v1/chat/completions", "model": "mistral-tiny", "provider": "mistral" }'
+_autocomplete_modellist['mistral:		mistral-small']='{ "completion_cost":0.0000027, "prompt_cost":0.0000008, "endpoint": "https://api.mistral.ai/v1/chat/completions", "model": "mistral-small", "provider": "mistral" }'
+_autocomplete_modellist['mistral:		mistral-medium']='{ "completion_cost":0.0000090, "prompt_cost":0.0000027, "endpoint": "https://api.mistral.ai/v1/chat/completions", "model": "mistral-medium", "provider": "mistral" }'
+_autocomplete_modellist['mistral:		mistral-large']='{ "completion_cost":0.00000300, "prompt_cost":0.00000100, "endpoint": "https://api.mistral.ai/v1/chat/completions", "model": "mistral-large", "provider": "mistral" }'
 # Ollama model
 _autocomplete_modellist['ollama:	codellama']='{ "completion_cost":0.0000000, "prompt_cost":0.0000000, "endpoint": "http://localhost:11434/api/chat", "model": "codellama", "provider": "ollama" }'
 
@@ -274,7 +279,7 @@ $prompt"
                 }]
             }')
             ;;
-        "GROQ")
+        "GROQ"|"MISTRAL")
             payload=$(echo "$base_payload" | jq '. + {response_format: {type: "json_object"}}')
             ;;
         "OLLAMA")
@@ -402,7 +407,7 @@ openai_completion() {
 
     if [[ "${ACSH_PROVIDER^^}" == "ANTHROPIC" ]]; then
         content=$(echo "$response_body" | jq -r '.content[0].input.commands')
-    elif [[ "${ACSH_PROVIDER^^}" == "GROQ" ]]; then
+    elif [[ "${ACSH_PROVIDER^^}" == "GROQ" || "${ACSH_PROVIDER^^}" == "MISTRAL" ]]; then
         content=$(echo "$response_body" | jq -r '.choices[0].message.content')
         content=$(echo "$content" | jq -r '.completions')
     elif [[ "${ACSH_PROVIDER^^}" == "OLLAMA" ]]; then
@@ -680,6 +685,9 @@ anthropic_api_key: \$ANTHROPIC_API_KEY
 # Groq API Key
 groq_api_key: \$GROQ_API_KEY
 
+# Mistral API Key
+mistral_api_key: \$MISTRAL_API_KEY
+
 # Custom API Key for Ollama
 custom_api_key: \$LLM_API_KEY
 
@@ -728,6 +736,9 @@ acsh_load_config() {
         if [[ -z "$ACSH_GROQ_API_KEY" && -n "$GROQ_API_KEY" ]]; then
             export ACSH_GROQ_API_KEY="$GROQ_API_KEY"
         fi
+        if [[ -z "$ACSH_MISTRAL_API_KEY" && -n "$MISTRAL_API_KEY" ]]; then
+            export ACSH_MISTRAL_API_KEY="$MISTRAL_API_KEY"
+        fi
         if [[ -z "$ACSH_OLLAMA_API_KEY" && -n "$LLM_API_KEY" ]]; then
             export ACSH_OLLAMA_API_KEY="$LLM_API_KEY"
         fi
@@ -739,6 +750,7 @@ acsh_load_config() {
             "openai") export ACSH_ACTIVE_API_KEY="$ACSH_OPENAI_API_KEY" ;;
             "anthropic") export ACSH_ACTIVE_API_KEY="$ACSH_ANTHROPIC_API_KEY" ;;
             "groq") export ACSH_ACTIVE_API_KEY="$ACSH_GROQ_API_KEY" ;;
+            "mistral") export ACSH_ACTIVE_API_KEY="$ACSH_MISTRAL_API_KEY" ;;
             "ollama") export ACSH_ACTIVE_API_KEY="$ACSH_OLLAMA_API_KEY" ;;
             *) echo_error "Unknown provider: $ACSH_PROVIDER" ;;
         esac
@@ -1030,6 +1042,8 @@ model_command() {
             echo "Create a new one: https://console.anthropic.com/settings/keys"
         elif [[ ${ACSH_PROVIDER^^} == "GROQ" ]]; then
             echo "Create a new one: https://console.groq.com/keys"
+        elif [[ ${ACSH_PROVIDER^^} == "MISTRAL" ]]; then
+            echo "Create a new one: https://console.mistral.ai/api-keys"
         fi
         print -n "Enter your ${ACSH_PROVIDER^^} API Key: "
         read -sr user_api_key_input < /dev/tty
